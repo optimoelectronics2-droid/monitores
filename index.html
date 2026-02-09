@@ -485,14 +485,14 @@
         <p style="margin-top: 8px; font-size: 0.85rem; opacity: 0.7;">Catálogo de monitores actualizado en tiempo real</p>
     </footer>
 
-    <!-- Firebase SDK - CORREGIDO: SIN ESPACIOS EN LAS URLS -->
+    <!-- Firebase SDK - SIN ESPACIOS EN URLs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     
     <script>
-        // CONFIGURACIÓN DE FIREBASE (CORRECTA Y SIN ERRORES)
+        // 🔑 CONFIGURACIÓN DE FIREBASE (INCLUIDA DIRECTAMENTE)
         const firebaseConfig = {
             apiKey: "AIzaSyDlOJqBgd-8KqUT-Y94lsma5W8T79PsPjM",
             authDomain: "trifusion-cotizador.firebaseapp.com",
@@ -510,10 +510,10 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
         
-        // CONFIGURACIÓN PARA MONITORES - CORREGIDA
+        // ✅ CONFIGURACIÓN CORREGIDA - MONITORES
         const SHEET_ID = "1dJ6IGB75oVPaWcWrQjzwjrCeZEmXwlw7";
-        const GID = "1636359945"; // ID correcto de tu hoja de monitores
-        // URL CORREGIDA: SIN ESPACIOS, SINTAXIS VÁLIDA
+        const GID = "1636359945"; // ID de la hoja de monitores
+        // 🔥 URL CORREGIDA: SIN ESPACIOS, SINTAXIS VÁLIDA
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`;
         const cont = document.getElementById("catalogo");
         const buscador = document.getElementById("buscadorProductos");
@@ -530,12 +530,14 @@
         let todosLosProductos = [];
         let mapaHuellas = {}; // huella → { id, imageUrl }
 
+        // =========================
         // FUNCIONES AUXILIARES
+        // =========================
         function limpiarEmojis(txt) {
             return txt.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim();
         }
 
-        // GENERAR HUELLA ESTABLE DEL MONITOR
+        // ✅ GENERAR HUELLA ESTABLE DEL PRODUCTO (para monitores)
         function generarHuella(nombre) {
             return nombre
                 .toLowerCase()
@@ -546,22 +548,28 @@
                 .trim();
         }
 
-        // DETECTAR CATEGORÍAS DE MONITORES
+        // ✅ DETECTAR CATEGORÍAS DE MONITORES (CORREGIDO PARA TU HOJA)
         function esCategoria(row) {
             const texto = (row[0] || "").trim().toUpperCase();
-            return texto.includes("MONITORES SAMSUNG") || 
-                   texto.includes("MONITORES LG") || 
-                   texto.includes("MONITORES ASUS") || 
-                   texto.includes("MONITORES DELL") ||
-                   texto.includes("MONITORES ACER") ||
-                   texto.includes("MONITORES HP") ||
-                   texto.includes("MONITORES VIEWSONIC") ||
-                   texto.includes("MONITORES BENQ");
+            // Verificar que NO tenga precio en la columna G (índice 6)
+            const precio = (row[6] || "").trim();
+            
+            // Si tiene precio, NO es categoría
+            if (precio && precio.startsWith("RD$")) return false;
+            
+            // Categorías válidas en tu Sheet de monitores
+            return texto.includes("MONITOR SAMSUNG") || 
+                   texto.includes("MONITOR MSI") || 
+                   texto.includes("MONITOR AOC") || 
+                   texto.includes("MONITOR HP");
         }
 
-        // CARGA DE HUELLAS DESDE FIRESTORE
+        // =========================
+        // CARGA DE HUELLAS DESDE FIRESTORE (colección "monitores")
+        // =========================
         async function precargarHuellas() {
             try {
+                // Usamos colección "monitores" para no mezclar con productos principales
                 const snapshot = await db.collection("monitores").get();
                 mapaHuellas = {};
                 snapshot.forEach(doc => {
@@ -577,10 +585,13 @@
                 console.log(`✅ ${Object.keys(mapaHuellas).length} huellas de monitores cargadas`);
             } catch (error) {
                 console.error("⚠️ Error cargando huellas de monitores:", error);
+                // No detenemos la carga del catálogo si falla Firestore
             }
         }
 
+        // =========================
         // AUTENTICACIÓN
+        // =========================
         loginBtn.addEventListener("click", () => {
             loginModal.classList.add("active");
         });
@@ -641,7 +652,9 @@
             cargarCatalogo();
         });
 
+        // =========================
         // CARGAR CATÁLOGO DE MONITORES
+        // =========================
         async function cargarCatalogo() {
             try {
                 cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--accent);font-size:1.2rem">Cargando monitores...</div>';
@@ -720,7 +733,7 @@
                         }
                     </div>
                     <div class="descripcion">${nombreLimpio}</div>
-                    <div class="precio">${precioRaw}</div>
+                    <div class="precio">${precioRaw}</div> <!-- PRECIO EXACTO SIN MODIFICAR -->
                 `;
                 
                 // Sección de administración si es admin
@@ -768,6 +781,7 @@
                             const existe = mapaHuellas[huellaActual];
                             
                             try {
+                                // Usamos la colección "monitores" para no mezclar con productos
                                 if (existe?.id) {
                                     await db.collection("monitores").doc(existe.id).update({
                                         imageUrl: url,
@@ -783,8 +797,8 @@
                                 }
                                 
                                 alert(`✅ Imagen guardada para "${nombreProducto}"`);
-                                await precargarHuellas();
-                                renderCatalogo(todosLosProductos);
+                                await precargarHuellas(); // Recargar mapa de huellas
+                                renderCatalogo(todosLosProductos); // Refrescar vista
                             } catch (error) {
                                 console.error("Error guardando imagen:", error);
                                 alert("Error al guardar la imagen: " + error.message);
@@ -804,6 +818,7 @@
                             }
                             
                             try {
+                                // Solo eliminamos el campo imageUrl, NO el documento
                                 await db.collection("monitores").doc(existe.id).update({
                                     imageUrl: firebase.firestore.FieldValue.delete(),
                                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -831,7 +846,9 @@
             }
         }
 
+        // =========================
         // EVENTOS
+        // =========================
         buscador.addEventListener("input", (e) => {
             renderCatalogo(todosLosProductos);
         });
@@ -842,35 +859,26 @@
 </body>
 </html>
 
-   <!-- ❌ ANTES (con espacios al final): -->
-   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js  "></script>
-   
-   <!-- ✅ AHORA (sin espacios): -->
-   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-   
 
 
               <script>
-                                 // ✅ SIN ESPACIOS, SINTAXIS VÁLIDA
-   const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`;
-   
-   function esCategoria(row) {
+                                 function esCategoria(row) {
        const texto = (row[0] || "").trim().toUpperCase();
-       return texto.includes("MONITORES SAMSUNG") || 
-              texto.includes("MONITORES LG") || 
-              // ... todas las marcas de monitores
+       const precio = (row[6] || "").trim();
+       
+       // Si tiene precio, NO es categoría
+       if (precio && precio.startsWith("RD$")) return false;
+       
+       // Categorías válidas en tu Sheet de monitores
+       return texto.includes("MONITOR SAMSUNG") || 
+              texto.includes("MONITOR MSI") || 
+              texto.includes("MONITOR AOC") || 
+              texto.includes("MONITOR HP");
    }
    
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /monitores/{monitorId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
-    // ... otras reglas que ya tengas
-  }
+match /monitores/{monitorId} {
+  allow read: if true;  // Público puede ver
+  allow write: if request.auth != null;  // Solo admin puede editar
 }
 
 
