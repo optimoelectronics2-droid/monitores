@@ -485,7 +485,7 @@
         <p style="margin-top: 8px; font-size: 0.85rem; opacity: 0.7;">Catálogo de monitores actualizado en tiempo real</p>
     </footer>
 
-    <!-- Firebase SDK - CORREGIDO: SIN ESPACIOS EN LAS URLS -->
+    <!-- Firebase SDK - SIN ESPACIOS EN LAS URLS -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -589,42 +589,50 @@
         // =========================
         // AUTENTICACIÓN
         // =========================
-        loginBtn.addEventListener("click", () => {
-            loginModal.classList.add("active");
-        });
+        if (loginBtn) {
+            loginBtn.addEventListener("click", () => {
+                loginModal.classList.add("active");
+            });
+        }
 
-        logoutBtn.addEventListener("click", () => {
-            auth.signOut();
-        });
+        if (logoutBtn) {
+            logoutBtn.addEventListener("click", () => {
+                auth.signOut();
+            });
+        }
 
-        submitLogin.addEventListener("click", () => {
-            const email = document.getElementById("adminEmail").value.trim();
-            const password = document.getElementById("adminPassword").value.trim();
-            
-            if (!email || !password) {
-                alert("Por favor ingresa correo y contraseña");
-                return;
-            }
-            
-            auth.signInWithEmailAndPassword(email, password)
-                .catch(error => {
-                    let message = "Error al iniciar sesión. ";
-                    if (error.code === "auth/invalid-email") {
-                        message += "Correo electrónico inválido.";
-                    } else if (error.code === "auth/wrong-password") {
-                        message += "Contraseña incorrecta.";
-                    } else if (error.code === "auth/user-not-found") {
-                        message += "Usuario no encontrado.";
-                    } else {
-                        message += error.message;
-                    }
-                    alert(message);
-                });
-        });
+        if (submitLogin) {
+            submitLogin.addEventListener("click", () => {
+                const email = document.getElementById("adminEmail").value.trim();
+                const password = document.getElementById("adminPassword").value.trim();
+                
+                if (!email || !password) {
+                    alert("Por favor ingresa correo y contraseña");
+                    return;
+                }
+                
+                auth.signInWithEmailAndPassword(email, password)
+                    .catch(error => {
+                        let message = "Error al iniciar sesión. ";
+                        if (error.code === "auth/invalid-email") {
+                            message += "Correo electrónico inválido.";
+                        } else if (error.code === "auth/wrong-password") {
+                            message += "Contraseña incorrecta.";
+                        } else if (error.code === "auth/user-not-found") {
+                            message += "Usuario no encontrado.";
+                        } else {
+                            message += error.message;
+                        }
+                        alert(message);
+                    });
+            });
+        }
 
-        closeModal.addEventListener("click", () => {
-            imageModal.classList.remove("active");
-        });
+        if (closeModal) {
+            closeModal.addEventListener("click", () => {
+                imageModal.classList.remove("active");
+            });
+        }
 
         imageModal.addEventListener("click", (e) => {
             if (e.target === imageModal) {
@@ -641,10 +649,10 @@
         // Observador de estado de autenticación
         auth.onAuthStateChanged(user => {
             esAdmin = !!user;
-            loginBtn.style.display = esAdmin ? "none" : "inline-flex";
-            logoutBtn.style.display = esAdmin ? "inline-flex" : "none";
-            document.getElementById("adminEmail").value = "";
-            document.getElementById("adminPassword").value = "";
+            if (loginBtn) loginBtn.style.display = esAdmin ? "none" : "inline-flex";
+            if (logoutBtn) logoutBtn.style.display = esAdmin ? "inline-flex" : "none";
+            if (document.getElementById("adminEmail")) document.getElementById("adminEmail").value = "";
+            if (document.getElementById("adminPassword")) document.getElementById("adminPassword").value = "";
             loginModal.classList.remove("active");
             cargarCatalogo();
         });
@@ -750,8 +758,8 @@
                 prodEl.innerHTML = htmlProducto;
                 
                 // Evento para ver imagen en modal
-                if (imageUrl) {
-                    const imgEl = prodEl.querySelector(".producto-img");
+                const imgEl = prodEl.querySelector(".producto-img");
+                if (imgEl && imageUrl) {
                     imgEl.addEventListener("click", (e) => {
                         e.stopPropagation();
                         modalImage.src = imageUrl;
@@ -844,9 +852,11 @@
         // =========================
         // EVENTOS
         // =========================
-        buscador.addEventListener("input", (e) => {
-            renderCatalogo(todosLosProductos);
-        });
+        if (buscador) {
+            buscador.addEventListener("input", (e) => {
+                renderCatalogo(todosLosProductos);
+            });
+        }
 
         // Cargar catálogo al iniciar
         window.addEventListener("DOMContentLoaded", cargarCatalogo);
@@ -854,16 +864,18 @@
 </body>
 </html>
 
-<!-- ❌ ANTES (con espacios al final): -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js  "></script>
-
-<!-- ✅ AHORA (sin espacios): -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-
 
 
               <script>
-                              // ❌ ANTES (con espacio después de "d/"):
+                              // ❌ ANTES: 
+loginBtn.addEventListener("click", ...); // Falla si loginBtn es null
+
+// ✅ AHORA:
+if (loginBtn) {
+    loginBtn.addEventListener("click", ...);
+}
+
+// ❌ ANTES (con espacio después de "d/"):
 const CSV_URL = `https://docs.google.com/spreadsheets/d/  ${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`;
 
 // ✅ AHORA (sin espacios, sintaxis válida):
