@@ -476,9 +476,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     
-    <!-- Firebase Config - INTEGRADA DIRECTAMENTE (como en index (1).html) -->
+    <!-- Firebase Config - INTEGRADA DIRECTAMENTE -->
     <script>
-        // TU CONFIGURACIÓN REAL DE FIREBASE (idéntica a index (1).html)
         const firebaseConfig = {
             apiKey: "AIzaSyDlOJqBgd-8KqUT-Y94lsma5W8T79PsPjM",
             authDomain: "trifusion-cotizador.firebaseapp.com",
@@ -488,7 +487,6 @@
             appId: "1:407374211882:web:b692792ccc39c8d48f4c53"
         };
         
-        // Initialize Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
@@ -498,10 +496,9 @@
     </script>
     
     <script>
-        // ✅ CONFIGURACIÓN CORREGIDA - MONITORES (idéntica estructura a index (1).html)
+        // CONFIGURACIÓN PARA MONITORES (CORREGIDA PARA MANEJAR FILAS CORTAS)
         const SHEET_ID = "1dJ6IGB75oVPaWcWrQjzwjrCeZEmXwlw7";
-        const GID = "1636359945"; // ID de la hoja de monitores
-        // 🔥 URL CORREGIDA: SIN ESPACIOS, SINTAXIS VÁLIDA
+        const GID = "1636359945";
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`;
         const cont = document.getElementById("catalogo");
         const buscador = document.getElementById("buscadorProductos");
@@ -516,16 +513,12 @@
 
         let esAdmin = false;
         let todosLosProductos = [];
-        let mapaHuellas = {}; // huella → { id, imageUrl }
+        let mapaHuellas = {};
 
-        // =========================
-        // FUNCIONES AUXILIARES
-        // =========================
         function limpiarEmojis(txt) {
             return txt.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim();
         }
 
-        // ✅ GENERAR HUELLA ESTABLE DEL PRODUCTO (para monitores)
         function generarHuella(nombre) {
             return nombre
                 .toLowerCase()
@@ -536,24 +529,23 @@
                 .trim();
         }
 
-        // ✅ DETECTAR CATEGORÍAS DE MONITORES (CORREGIDO)
+        // ✅ CORREGIDO: Maneja filas con menos columnas
         function esCategoria(row) {
-            const texto = (row[0] || "").trim().toUpperCase();
-            const precio = (row[6] || "").trim();
+            // Verificar que la fila tenga al menos 1 columna
+            if (!row || row.length === 0) return false;
             
-            // Si tiene precio, NO es categoría
+            const texto = (row[0] || "").trim().toUpperCase();
+            // Verificar que la fila tenga al menos 7 columnas antes de acceder a row[6]
+            const precio = (row.length > 6) ? (row[6] || "").trim() : "";
+            
             if (precio && precio.startsWith("RD$")) return false;
             
-            // Categorías válidas en tu Sheet de monitores
             return texto.includes("MONITOR SAMSUNG") || 
                    texto.includes("MONITOR MSI") || 
                    texto.includes("MONITOR AOC") || 
                    texto.includes("MONITOR HP");
         }
 
-        // =========================
-        // CARGA DE HUELLAS DESDE FIRESTORE
-        // =========================
         async function precargarHuellas() {
             try {
                 const snapshot = await db.collection("monitores").get();
@@ -574,9 +566,6 @@
             }
         }
 
-        // =========================
-        // AUTENTICACIÓN
-        // =========================
         loginBtn.addEventListener("click", () => {
             loginModal.classList.add("active");
         });
@@ -626,7 +615,6 @@
             }
         });
 
-        // Observador de estado de autenticación
         auth.onAuthStateChanged(user => {
             esAdmin = !!user;
             loginBtn.style.display = esAdmin ? "none" : "inline-flex";
@@ -637,17 +625,12 @@
             cargarCatalogo();
         });
 
-        // =========================
-        // CARGAR CATÁLOGO DE MONITORES
-        // =========================
         async function cargarCatalogo() {
             try {
                 cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--accent);font-size:1.2rem">Cargando monitores...</div>';
                 
-                // Cargar huellas de Firestore PRIMERO
                 await precargarHuellas();
                 
-                // Cargar CSV de monitores
                 const resp = await fetch(CSV_URL);
                 if (!resp.ok) throw new Error(`Error al cargar: ${resp.status}`);
                 
@@ -676,12 +659,12 @@
             let productosMostrados = 0;
             
             rows.forEach(row => {
-                // Columna A: descripción completa (índice 0)
-                // Columna G: precio (índice 6)
+                // ✅ CORREGIDO: Verificar que la fila tenga al menos 7 columnas
+                if (!row || row.length < 7) return;
+                
                 const descripcionCompleta = (row[0] || "").trim();
                 const precioRaw = (row[6] || "").trim();
                 
-                // Renderizar categoría
                 if (esCategoria(row)) {
                     const textoCategoria = limpiarEmojis(descripcionCompleta);
                     const catEl = document.createElement("div");
@@ -691,25 +674,18 @@
                     return;
                 }
                 
-                // Saltar filas sin descripción o sin precio válido
                 if (!descripcionCompleta || !precioRaw || !precioRaw.startsWith("RD$")) return;
                 
-                // Aplicar filtro de búsqueda
                 if (filtro && !descripcionCompleta.toLowerCase().includes(filtro)) return;
                 
-                // Generar nombre limpio y huella estable
                 const nombreLimpio = limpiarEmojis(descripcionCompleta);
                 const huella = generarHuella(nombreLimpio);
-                
-                // Obtener datos del producto desde el mapa de huellas
                 const datosProducto = mapaHuellas[huella] || { id: null, imageUrl: "" };
                 const imageUrl = datosProducto.imageUrl;
                 
-                // Crear elemento de producto
                 const prodEl = document.createElement("div");
                 prodEl.className = "producto";
                 
-                // HTML del producto - PRECIO EXACTO COMO EN EL SHEET
                 let htmlProducto = `
                     <div class="producto-img-container">
                         ${imageUrl ? 
@@ -721,7 +697,6 @@
                     <div class="precio">${precioRaw}</div>
                 `;
                 
-                // Sección de administración si es admin
                 if (esAdmin) {
                     htmlProducto += `
                         <div class="admin-section">
@@ -737,9 +712,9 @@
                 
                 prodEl.innerHTML = htmlProducto;
                 
-                // Evento para ver imagen en modal
-                if (imageUrl) {
-                    const imgEl = prodEl.querySelector(".producto-img");
+                // ✅ CORREGIDO: Eventos con verificación de existencia
+                const imgEl = prodEl.querySelector(".producto-img");
+                if (imgEl && imageUrl) {
                     imgEl.addEventListener("click", (e) => {
                         e.stopPropagation();
                         modalImage.src = imageUrl;
@@ -747,7 +722,6 @@
                     });
                 }
                 
-                // Eventos de administración
                 if (esAdmin) {
                     const saveBtn = prodEl.querySelector(".save-image");
                     const deleteBtn = prodEl.querySelector(".delete-image");
@@ -755,7 +729,7 @@
                     const huellaActual = huella;
                     const nombreProducto = nombreLimpio;
                     
-                    if (saveBtn) {
+                    if (saveBtn && urlInput) {
                         saveBtn.addEventListener("click", async () => {
                             const url = urlInput.value.trim();
                             if (!url) {
@@ -822,21 +796,16 @@
                 productosMostrados++;
             });
             
-            // Mostrar mensaje si no hay productos
             mensajeVacio.style.display = productosMostrados === 0 ? "block" : "none";
             if (productosMostrados === 0 && cont.children.length === 0) {
                 cont.innerHTML = `<div id="mensajeVacio">No se encontraron monitores.</div>`;
             }
         }
 
-        // =========================
-        // EVENTOS
-        // =========================
         buscador.addEventListener("input", (e) => {
             renderCatalogo(todosLosProductos);
         });
 
-        // Cargar catálogo al iniciar
         window.addEventListener("DOMContentLoaded", cargarCatalogo);
     </script>
 </body>
