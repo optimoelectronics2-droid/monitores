@@ -447,8 +447,8 @@
             <input id="buscadorProductos" type="text" placeholder="Escribe el modelo o características...">
         </div>
         <div class="panel">
-            <div class="panel-title">MONITORES</div>
-            <button id="btnLogin" class="btn-admin">TRIFUSION</button>
+            <div class="panel-title">Acceso Administrador</div>
+            <button id="btnLogin" class="btn-admin">🔐 ADMIN</button>
             <button id="btnLogout" class="btn-logout">👋 SALIR</button>
         </div>
     </div>
@@ -460,7 +460,7 @@
 
     <div id="loginModal" class="login-modal">
         <div class="login-box">
-            <h2>TRIFUSION</h2>
+            <h2>Acceso de Administrador</h2>
             <input type="email" id="adminEmail" class="login-input" placeholder="Correo electrónico" autocomplete="email" required>
             <input type="password" id="adminPassword" class="login-input" placeholder="Contraseña" autocomplete="current-password" required>
             <button id="submitLogin" class="btn-login">Iniciar Sesión</button>
@@ -485,16 +485,31 @@
         <p style="margin-top: 8px; font-size: 0.85rem; opacity: 0.7;">Catálogo de monitores actualizado en tiempo real</p>
     </footer>
 
-    <!-- Firebase SDK - CORREGIDO: SIN ESPACIOS EN LAS URLS -->
+    <!-- Firebase SDK - SIN ESPACIOS EN URLs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     
-    <!-- Firebase Config -->
-    <script src="firebase-config.js"></script>
-    
     <script>
+        // 🔑 CONFIGURACIÓN DE FIREBASE (INCLUIDA DIRECTAMENTE)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDlOJqBgd-8KqUT-Y94lsma5W8T79PsPjM",
+            authDomain: "trifusion-cotizador.firebaseapp.com",
+            projectId: "trifusion-cotizador",
+            storageBucket: "trifusion-cotizador.firebasestorage.app",
+            messagingSenderId: "407374211882",
+            appId: "1:407374211882:web:b692792ccc39c8d48f4c53"
+        };
+        
+        // Inicializar Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
         // ✅ CONFIGURACIÓN CORREGIDA - MONITORES
         const SHEET_ID = "1dJ6IGB75oVPaWcWrQjzwjrCeZEmXwlw7";
         const GID = "1636359945"; // ID de la hoja de monitores
@@ -533,9 +548,10 @@
                 .trim();
         }
 
-        // ✅ DETECTAR CATEGORÍAS DE MONITORES (CORREGIDO)
+        // ✅ DETECTAR CATEGORÍAS DE MONITORES (CORREGIDO PARA TU HOJA)
         function esCategoria(row) {
             const texto = (row[0] || "").trim().toUpperCase();
+            // Verificar que NO tenga precio en la columna G (índice 6)
             const precio = (row[6] || "").trim();
             
             // Si tiene precio, NO es categoría
@@ -549,10 +565,11 @@
         }
 
         // =========================
-        // CARGA DE HUELLAS DESDE FIRESTORE
+        // CARGA DE HUELLAS DESDE FIRESTORE (colección "monitores")
         // =========================
         async function precargarHuellas() {
             try {
+                // Usamos colección "monitores" para no mezclar con productos principales
                 const snapshot = await db.collection("monitores").get();
                 mapaHuellas = {};
                 snapshot.forEach(doc => {
@@ -568,81 +585,70 @@
                 console.log(`✅ ${Object.keys(mapaHuellas).length} huellas de monitores cargadas`);
             } catch (error) {
                 console.error("⚠️ Error cargando huellas de monitores:", error);
+                // No detenemos la carga del catálogo si falla Firestore
             }
         }
 
         // =========================
         // AUTENTICACIÓN
         // =========================
-        if (loginBtn) {
-            loginBtn.addEventListener("click", () => {
-                loginModal.classList.add("active");
-            });
-        }
+        loginBtn.addEventListener("click", () => {
+            loginModal.classList.add("active");
+        });
 
-        if (logoutBtn) {
-            logoutBtn.addEventListener("click", () => {
-                auth.signOut();
-            });
-        }
+        logoutBtn.addEventListener("click", () => {
+            auth.signOut();
+        });
 
-        if (submitLogin) {
-            submitLogin.addEventListener("click", () => {
-                const email = document.getElementById("adminEmail").value.trim();
-                const password = document.getElementById("adminPassword").value.trim();
-                
-                if (!email || !password) {
-                    alert("Por favor ingresa correo y contraseña");
-                    return;
-                }
-                
-                auth.signInWithEmailAndPassword(email, password)
-                    .catch(error => {
-                        let message = "Error al iniciar sesión. ";
-                        if (error.code === "auth/invalid-email") {
-                            message += "Correo electrónico inválido.";
-                        } else if (error.code === "auth/wrong-password") {
-                            message += "Contraseña incorrecta.";
-                        } else if (error.code === "auth/user-not-found") {
-                            message += "Usuario no encontrado.";
-                        } else {
-                            message += error.message;
-                        }
-                        alert(message);
-                    });
-            });
-        }
+        submitLogin.addEventListener("click", () => {
+            const email = document.getElementById("adminEmail").value.trim();
+            const password = document.getElementById("adminPassword").value.trim();
+            
+            if (!email || !password) {
+                alert("Por favor ingresa correo y contraseña");
+                return;
+            }
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(error => {
+                    let message = "Error al iniciar sesión. ";
+                    if (error.code === "auth/invalid-email") {
+                        message += "Correo electrónico inválido.";
+                    } else if (error.code === "auth/wrong-password") {
+                        message += "Contraseña incorrecta.";
+                    } else if (error.code === "auth/user-not-found") {
+                        message += "Usuario no encontrado.";
+                    } else {
+                        message += error.message;
+                    }
+                    alert(message);
+                });
+        });
 
-        if (closeModal) {
-            closeModal.addEventListener("click", () => {
+        closeModal.addEventListener("click", () => {
+            imageModal.classList.remove("active");
+        });
+
+        imageModal.addEventListener("click", (e) => {
+            if (e.target === imageModal) {
                 imageModal.classList.remove("active");
-            });
-        }
+            }
+        });
 
-        if (imageModal) {
-            imageModal.addEventListener("click", (e) => {
-                if (e.target === imageModal) {
-                    imageModal.classList.remove("active");
-                }
-            });
-        }
-
-        if (loginModal) {
-            loginModal.addEventListener("click", (e) => {
-                if (e.target === loginModal) {
-                    loginModal.classList.remove("active");
-                }
-            });
-        }
+        loginModal.addEventListener("click", (e) => {
+            if (e.target === loginModal) {
+                loginModal.classList.remove("active");
+            }
+        });
 
         // Observador de estado de autenticación
         auth.onAuthStateChanged(user => {
             esAdmin = !!user;
-            if (loginBtn) loginBtn.style.display = esAdmin ? "none" : "inline-flex";
-            if (logoutBtn) logoutBtn.style.display = esAdmin ? "inline-flex" : "none";
-            if (document.getElementById("adminEmail")) document.getElementById("adminEmail").value = "";
-            if (document.getElementById("adminPassword")) document.getElementById("adminPassword").value = "";
-            if (loginModal) loginModal.classList.remove("active");
+            loginBtn.style.display = esAdmin ? "none" : "inline-flex";
+            logoutBtn.style.display = esAdmin ? "inline-flex" : "none";
+            document.getElementById("adminEmail").value = "";
+            document.getElementById("adminPassword").value = "";
+            loginModal.classList.remove("active");
             cargarCatalogo();
         });
 
@@ -727,7 +733,7 @@
                         }
                     </div>
                     <div class="descripcion">${nombreLimpio}</div>
-                    <div class="precio">${precioRaw}</div>
+                    <div class="precio">${precioRaw}</div> <!-- PRECIO EXACTO SIN MODIFICAR -->
                 `;
                 
                 // Sección de administración si es admin
@@ -747,12 +753,12 @@
                 prodEl.innerHTML = htmlProducto;
                 
                 // Evento para ver imagen en modal
-                const imgEl = prodEl.querySelector(".producto-img");
-                if (imgEl && imageUrl) {
+                if (imageUrl) {
+                    const imgEl = prodEl.querySelector(".producto-img");
                     imgEl.addEventListener("click", (e) => {
                         e.stopPropagation();
                         modalImage.src = imageUrl;
-                        if (imageModal) imageModal.classList.add("active");
+                        imageModal.classList.add("active");
                     });
                 }
                 
@@ -775,6 +781,7 @@
                             const existe = mapaHuellas[huellaActual];
                             
                             try {
+                                // Usamos la colección "monitores" para no mezclar con productos
                                 if (existe?.id) {
                                     await db.collection("monitores").doc(existe.id).update({
                                         imageUrl: url,
@@ -790,8 +797,8 @@
                                 }
                                 
                                 alert(`✅ Imagen guardada para "${nombreProducto}"`);
-                                await precargarHuellas();
-                                renderCatalogo(todosLosProductos);
+                                await precargarHuellas(); // Recargar mapa de huellas
+                                renderCatalogo(todosLosProductos); // Refrescar vista
                             } catch (error) {
                                 console.error("Error guardando imagen:", error);
                                 alert("Error al guardar la imagen: " + error.message);
@@ -811,6 +818,7 @@
                             }
                             
                             try {
+                                // Solo eliminamos el campo imageUrl, NO el documento
                                 await db.collection("monitores").doc(existe.id).update({
                                     imageUrl: firebase.firestore.FieldValue.delete(),
                                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -841,11 +849,9 @@
         // =========================
         // EVENTOS
         // =========================
-        if (buscador) {
-            buscador.addEventListener("input", (e) => {
-                renderCatalogo(todosLosProductos);
-            });
-        }
+        buscador.addEventListener("input", (e) => {
+            renderCatalogo(todosLosProductos);
+        });
 
         // Cargar catálogo al iniciar
         window.addEventListener("DOMContentLoaded", cargarCatalogo);
@@ -855,5 +861,22 @@
 
 
 
-           
+              <script>
+                                 function esCategoria(row) {
+       const texto = (row[0] || "").trim().toUpperCase();
+       const precio = (row[6] || "").trim();
+       
+       // Si tiene precio, NO es categoría
+       if (precio && precio.startsWith("RD$")) return false;
+       
+       // Categorías válidas en tu Sheet de monitores
+       return texto.includes("MONITOR SAMSUNG") || 
+              texto.includes("MONITOR MSI") || 
+              texto.includes("MONITOR AOC") || 
+              texto.includes("MONITOR HP");
+   
 
+              </script>
+                        </body>
+                        </html>
+                    
